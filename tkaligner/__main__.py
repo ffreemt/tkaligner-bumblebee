@@ -9,7 +9,7 @@ import tkinter as tk
 import logzero
 from logzero import logger
 
-from tkaligner.aligner_ui import Aligner
+from aligner_ui import Aligner
 
 
 def tkaligner() -> None:

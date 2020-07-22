@@ -1,0 +1,19 @@
+{
+  "restartable": "rs",
+  "ignore": [".git", "node_modules/**/node_modules", "diskcache", "**/*pyc"],
+  "verbose": true,
+  "execMap": {
+    "js": "node --harmony",
+    "py1": "C:\\Python\\Python36\\python.exe",
+    "py": "C:\\dl\\Dropbox\\mat-dir\\myapps\\tkaligner\\.venv\\Scripts\\python.exe"
+  },
+  "events": {
+    "restart": "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'"
+  },
+  "watch1": ["test/fixtures/", "test/samples/"],
+  "watch": [".", "test/samples/"],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "js,json,py"
+}

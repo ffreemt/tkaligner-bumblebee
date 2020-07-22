@@ -13,7 +13,7 @@ import logzero
 from logzero import logger
 
 # from aligner_ui import Aligner
-import aligner_ui_support
+# import aligner_ui_support
 
 # from extract_rows import extract_rows
 
@@ -28,4 +28,6 @@ def quit_command(self, event=None):  # pylint: disable=unused-argument
         logger.debug(event)
     # if tkMessageBox.askokcancel(
     if messagebox.askokcancel("Quit ", "Do you really want to quit?"):
-        self.top.destroy()  # self.top is root = tk.Tk()
+        # self.top.destroy()  # self.top is root = tk.Tk()
+        self.top.quit()  # self.top is root = tk.Tk()
+
