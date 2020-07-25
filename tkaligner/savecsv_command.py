@@ -1,5 +1,4 @@
-""" savexlsx_command.
-"""
+""" savecsv_command."""
 
 import os
 from pathlib import Path
@@ -29,8 +28,8 @@ else:
     logzero.loglevel(20)
 
 
-def savexlsx_command(self, event=None):
-    """ savexlsx_command.
+def savecsv_command(self, event=None) -> None:
+    """ savecsv_command.
     self is aligner
     self.Table.model.df: DataFrame of interest
 
@@ -87,11 +86,11 @@ def savexlsx_command(self, event=None):
             Path(filename2).stem,
         ]
     )
-    xlsxfile_p = gen_filename(f"{prefix}aligned-p.xlsx")
-    xlsxfile_s = gen_filename(f"{prefix}aligned-s.xlsx")
+    csvfile_p = gen_filename(f"{prefix}aligned-p.csv")
+    csvfile_s = gen_filename(f"{prefix}aligned-s.csv")
     path_ = Path(filename1).parent
-    xlsxfile_p = f"{path_ / xlsxfile_p}"
-    xlsxfile_s = f"{path_ / xlsxfile_s}"
+    csvfile_p = f"{path_ / csvfile_p}"
+    csvfile_s = f"{path_ / csvfile_s}"
 
     msg = "\n"
     logger.debug(" self.saligned %s, self.paligned %s", self.saligned, self.paligned)
@@ -103,9 +102,9 @@ def savexlsx_command(self, event=None):
             "text2": self.paras2,
             "merit": self.paras_merit
         })
-        df_.to_excel(xlsxfile_p, index=False, header=False)
-        logger.info(" Aligned paras saved to %s", xlsxfile_p)
-        msg += " Aligned paras saved to %s\n" % xlsxfile_p
+        df_.to_csv(csvfile_p, index=False, header=False, encoding="gbk")
+        logger.info(" Aligned paras saved to %s", csvfile_p)
+        msg += " Aligned paras saved to %s\n" % csvfile_p
 
     logger.debug(" self.sents1: %s, self.sents2: %s", self.sents1, self.sents2)
 
@@ -115,14 +114,14 @@ def savexlsx_command(self, event=None):
             "text2": self.sents2,
             "merit": self.sents_merit
         })
-        df_.to_excel(xlsxfile_s, index=False, header=False, encoding="gbk")
-        logger.info(" Aligned sents saved to %s", xlsxfile_s)
-        msg += " Aligned sents saved to %s" % xlsxfile_s
+        df_.to_csv(csvfile_s, index=False, header=False, encoding="gbk")
+        logger.info(" Aligned sents saved to %s", csvfile_s)
+        msg += " Aligned sents saved to %s" % csvfile_s
 
     msg = msg.strip()
     if msg:
         messagebox.showinfo(title="File(s) saved", message=msg)
 
-    logger.debug("xlsfile: %s, %s", xlsxfile_p, xlsxfile_s)
+    logger.debug("csvfile: %s, %s", csvfile_p, csvfile_s)
 
-    logger.info("savexlsx_command")
+    logger.info("savecsv_command")

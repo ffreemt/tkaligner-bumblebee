@@ -18,7 +18,9 @@ from load_paras import load_paras
 from insert_column import insert_column
 from extract_rows import extract_rows
 
-# SIG_TABLE = blinker.signal("table")
+from queue1_put import queue1_put
+from queues import QUEUE_T2
+
 SIG_PAD = blinker.signal("pad")
 
 
@@ -90,3 +92,8 @@ def open2_command(self, event=None):  # pylint: disable=unused-argument
 
     self.Table.show()
     self.Table.redraw()
+
+    self.filename2 = file
+    logger.debug(" setting filename2 *%s* and QUEUE_T2 self.text2[:3] %s", self.filename2, self.text2[:3])
+
+    queue1_put(QUEUE_T2, self.text2)

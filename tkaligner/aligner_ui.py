@@ -5,6 +5,8 @@
 #  in conjunction with Tcl version 8.6
 #    Jul 21, 2020 10:13:09 AM CST  platform: Windows NT
 
+from typing import List, Union
+
 import sys
 
 # from threading import Thread
@@ -32,21 +34,8 @@ from mytable import MyTable
 from queues import QUEUE_SPINBOX
 from extract_rows import extract_rows
 
-# to update table when loading files with open1 open2
-SIG_TABLE = blinker.signal('table')
-# SIG_FILENAMES = blinker.signal(filenames)
-
-try:
-    import Tkinter as tk
-except ImportError:
-    import tkinter as tk
-
-try:
-    import ttk
-    py3 = False
-except ImportError:
-    import tkinter.ttk as ttk
-    py3 = True
+import tkinter as tk
+import tkinter.ttk as ttk
 
 import aligner_ui_support
 from queue1_put import queue1_put
@@ -55,13 +44,17 @@ from support import on_howto, on_about  # savetmx_command
 from open1_command import open1_command
 from open2_command import open2_command
 from savetmx_command import savetmx_command
-from savetsv_command import savetsv_command
+from savecsv_command import savecsv_command
 from savexlsx_command import savexlsx_command
 from quit_command import quit_command
 
 from palign_command import palign_command
 from salign_command import salign_command
 from reset_command import reset_command
+
+# to update table when loading files with open1 open2
+SIG_TABLE = blinker.signal('table')
+SIG_ALIGNER = blinker.signal('aligner')
 
 
 def vp_start_gui():
@@ -108,6 +101,26 @@ class Aligner:
         self.spinbox = ''
         # QUEUE_SPINBOX.put('*')
         queue1_put(QUEUE_SPINBOX, '*')
+
+        def handle_signal(sender, **kw):
+            self.slot(sender, **kw)
+        self.handle_signal = handle_signal  # important, not for nothing
+        SIG_ALIGNER.connect(handle_signal)
+        # in effect SIG_ALIGNER.connect(self.slot)
+
+        # aux props
+        self.filename1 = ""
+        self.filename2 = ""
+        self.text1 = ""  # type: Union[str, List[str]]
+        self.text2 = ""  # type: Union[str, List[str]]
+        self.paras1 = ""
+        self.paras2 = ""
+        self.paras_merit = ""
+        self.sents1 = ""
+        self.sents2 = ""
+        self.sents_merit = ""
+        self.paligned = False
+        self.saligned = False
 
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
@@ -201,9 +214,9 @@ class Aligner:
                 activeforeground="#000000",
                 accelerator="Ctrl+T",
                 background="#d9d9d9",
-                # command=aligner_ui_support.self.savetsv_command,
-                # command=self.savetsv_command,
-                command=lambda: savetsv_command(self),
+                # command=aligner_ui_support.self.savecsv_command,
+                # command=self.savecsv_command,
+                command=lambda: savecsv_command(self),
                 font="TkDefaultFont",
                 foreground="#000000",
                 label="SaveTsv",
@@ -319,8 +332,8 @@ class Aligner:
         self.sub_menu.bind_all('<Control-Key-o>',lambda e: open1_command(self, event=e))
         # self.sub_menu.bind_all('<Control-Key-p>',lambda e: self.open2_command(e))
         self.sub_menu.bind_all('<Control-Key-p>',lambda e: open2_command(self, event=e))
-        # self.sub_menu.bind_all('<Control-Key-t>',lambda e: self.savetsv_command(e))
-        self.sub_menu.bind_all('<Control-Key-t>',lambda e: savetsv_command(self, event=e))
+        # self.sub_menu.bind_all('<Control-Key-t>',lambda e: self.savecsv_command(e))
+        self.sub_menu.bind_all('<Control-Key-t>',lambda e: savecsv_command(self, event=e))
         # self.sub_menu.bind_all('<Control-Key-m>',lambda e: self.savetmx_command(e))
         self.sub_menu.bind_all('<Control-Key-m>',lambda e: savetmx_command(self, event=e))
         self.sub_menu.bind_all('<Control-Key-x>',lambda e: savexlsx_command(self, event=e))
@@ -331,197 +344,14 @@ class Aligner:
         self.sub_menu.bind_all('<Control-Key-s>',lambda e: salign_command(self, event=e))
         self.sub_menu.bind_all('<Control-Key-r>',lambda e: reset_command(self, event=e))
 
-    def open1_command(self, event=None):
-        from load_paras import load_paras
-
-        logger.debug('<open1_command>')
-        # from tkinter import filedialog
-        # self.top = self
-        # file = tk.filedialog.askopenfile(parent=root, mode='r', title='Select a file')
-
-        # file = filedialog.askopenfile(parent=self.top, mode='r', title='Select a file')
-        file = filedialog.askopenfilename(title='Select a file', filetypes = (
-            ("text files", "*.txt"),
-            ("pdf files", "*.pdf"),
-            ("docx files", "*.docx"),
-            ("all files", "*.*"),
-        ))
-
-        if file != None:
-            # self.text.delete('1.0', END)
-
-            # self.text1 = file.read()
-            try:
-                self.text1, _ = load_paras(file)
-            except:
-                self.text1 = load_paras(file)
-
-            # root.wm_title(file.name + " : Zen Text Editor")
-            # self.text.insert('1.0', contents)
-            logger.debug('self.text1[:3]: %s', self.text1[:3])
-
-            # file.close()
-
-        # values = self.text1.split('\n')
-        values = self.text1
-
-        df = self.Table.model.df
-        df.columns = ['text1', 'text2', 'merit']
-        df = insert_column(values, df, 0)
-        self.Table.model.df = df
-
-        # logger.debug(self.Table.model.df)
-        # data = extract_rows(self.Table.model.df, 0)
-        data = extract_rows(self.Table.model.df, self.Table.row_clicked)
-
-        logger.debug("data sent to SIG_TABLE.send(data=data): %s", data)
-
-        SIG_TABLE.send(data=data)
-
-        self.Table.show()
-        self.Table.redraw()
-
-    def open2_command(self, event=None):
-        # from load_paras import load_paras
-
-        logger.debug('<open2_command>')
-
-        # from tkinter import filedialog
-        # self.top = self
-        # file = tk.filedialog.askopenfile(parent=root, mode='r', title='Select a file')
-
-        # file = filedialog.askopenfile(parent=self.top, mode='r', title='Select a file')
-        file = filedialog.askopenfilename(title='Select a file', filetypes = (
-            ("text files", "*.txt"),
-            # ("pdf files", "*.pdf"),
-            # ("docx files", "*.docx"),
-            ("all files", "*.*"),
-        ))
-
-        if file != None:
-            # self.text.delete('1.0', END)
-            # self.text2 = file.read()
-
-            try:
-                self.text2, _ = load_paras(file)
-            except:
-                self.text2 = load_paras(file)
-
-            # root.wm_title(file.name + " : Zen Text Editor")
-            # self.text.insert('1.0', contents)
-
-            logger.debug('self.text2[:3]: %s', self.text2[:3])
-
-            # file.close()
-
-        # values = self.text2.split('\n')
-        values = self.text2
-
-        df = self.Table.model.df
-        df.columns = ['text1', 'text2', 'merit']
-        df = insert_column(values, df, 1)
-        self.Table.model.df = df
-
-        # logger.debug(self.Table.model.df)
-        logger.debug("self.Table.model.df[:3]: %s", self.Table.model.df[:3])
-        # send self.Table.model.df[:3] to PAD
-        # SIG_TABLE.send(data=self.Table.model.df[:3])
-
-        # data = extract_rows(self.model.df, self.row_clicked)
-        # pretend row 0 clicked
-        # data = extract_rows(self.Table.model.df, 0)
-
-        data = extract_rows(self.Table.model.df, self.Table.row_clicked)
-        logger.debug("data sent to SIG_TABLE.send(data=data): %s", data)
-
-        SIG_TABLE.send(data=data)
-
-        self.Table.show()
-        self.Table.redraw()
-
-    def palign_command(self, event=None):
-
-        logger.debug('palign_command')
-
-        top = self.top
-        # top = None
-
-        window = tk.Toplevel(top)
-        # window = tk.Toplevel(self) does not work
-
-        # refer to open_settings_window.py
-
-        myprogressbar_ui_support.set_Tk_var()
-
-        # QUEUE_SPINBOX.put('*')
-        pbar = Mypbar(window)
-        # pbar = Mypbar(self)
-
-        # disbale cancel butt until start is clicked
-        # TButton1: Start, 2: Cancel,3: Back
-        pbar.TButton2.config(state=tk.DISABLED)
-
-        window.focus_force()
-        window.grab_set()
-        return None
-
-    def quit_command(self, event=None):
-        logger.debug('quit_command')
-        if event:
-            logger.debug(event)
-        # if tkMessageBox.askokcancel(
-        if messagebox.askokcancel(
-            "Quit ","Do you really want to quit?"
-        ):
-            self.top.destroy()  # self.top is root = tk.Tk()
-
-            # logger.debug(" after self.top.destroy_window()")
-            # import sys
-            # sys.exit()
-
-            # self.top = None
-            # refer to aligner_ui_support.destroy_window
-            # refer to vp_start_gui in aligner_ui.py
-
-            # aligner_ui_support.destroy_window()
-
-    def reset_command(self, event=None):
-            logger.info('reset_command')
-            # sys.stdout.flush()
-
-    def salign_command(self, event=None):
-
-        logger.debug('salign_command')
-
-        top = self.top
-        # top = None
-
-        window = tk.Toplevel(top)
-        # window = tk.Toplevel(self) does not work
-
-        # refer to open_settings_window.py
-
-        myprogressbar_ui_support.set_Tk_var()
-
-        # QUEUE_SPINBOX.put('*')
-        pbar = Mypbar(window)
-        # pbar = Mypbar(self)
-
-        # disbale cancel butt until start is clicked
-        # TButton1: Start, 2: Cancel,3: Back
-        pbar.TButton2.config(state=tk.DISABLED)
-
-        window.focus_force()
-        window.grab_set()
-        return None
-
-    def savetmx_command(self, event=None):
-        logger.info('savetmx_command')
-        sys.stdout.flush()
-
-    def savetsv_command(self, event=None):
-        logger.info('savetsv_command')
-        # sys.stdout.flush()
+    def slot(self, sender, **kw):
+        """ handle signal data sent to SIG_ALIGNER.
+            e.g., SIG_ALIGNER.send("sender", {"sent_lst": data})
+        """
+        # print(" aigner received ", sender, kw)
+        if kw.get("sent_lst"):
+            self.sent_lst = kw.get("sent_lst")
+            # print(" it works! self.sent_lst = ", self.sent_lst)
 
 
 if __name__ == '__main__':

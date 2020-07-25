@@ -1,0 +1,2 @@
+python rsync-some-libs.py
+python rsync-bee_aligner-pyc-to-dist.py

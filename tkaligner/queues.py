@@ -59,14 +59,24 @@ from queue import Queue
 
 QUEUE = Queue(1)  # c_value: % value and bool
 
-# STOP queue for stopping longtime_job thead
+# STOP queue for stopping longtime_job thread
 QUEUE_S = Queue(1)
 QUEUE_S1 = Queue(1)
 
 # running label queue for longtime_job and pbar counter: step
 QUEUE_C = Queue(1)
 QUEUE_T1 = Queue(1)  # text1 queue for self.text1
-QUEUE_T2 = Queue(1)  # text2 queue for self.text2
+QUEUE_T2 = Queue(1)  # text2 queue for self.t
+QUEUE_P1 = Queue(1)  # paras queue for self.paras1
+QUEUE_P2 = Queue(1)  # paras queue for self.paras2
+QUEUE_PM = Queue(1)  # paras queue for self.paras_merit
+QUEUE_S1 = Queue(1)  # sents1 queue for self.sents1
+QUEUE_S2 = Queue(1)  # sents2 queue for self.sents2
+QUEUE_SM = Queue(1)  # sents2 queue for self.sents_merit
+QUEUE_PS = Queue(1)  # queue for palign or salign used in myprogressbar start_command
+QUEUE_PA = Queue(1)  # queue for palign or self.paligned
+QUEUE_SA = Queue(1)  # queue for palign or self.saligned
+
 QUEUE_SPINBOX = Queue(1)  # threshold for the aligner
 
 # pylint: disable=invalid-name

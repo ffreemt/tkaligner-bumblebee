@@ -208,7 +208,7 @@ class MyTable(Table):  # pylint: disable=too-many-ancestors
     # """
 
     def slot_table(self, sender, **kw):
-        ''' handle data from mypad'''
+        ''' handle data for SIG_TABLE (from mypad and other sources) '''
         # logger.debug('**************Enter slot_table, received - sender: %s, kw: \n%s', sender, kw)
 
         # handle df from longtime_job: SIG_PAD.send('job', df=df_data)

@@ -9,40 +9,47 @@
 
 # pylint: disable=ungrouped-imports, global-variable-undefined, global-variable-not-assigned, global-statement
 
+from typing import List, Union
+
 import os
 import sys
 from pathlib import Path
 
+import tkinter as tk
+import tkinter.ttk as ttk
+from tkinter import messagebox
+from itertools import zip_longest
+
 from threading import Thread
+from queue import Empty
 
 # from textwrap import dedent
+from polyglot.text import Detector
 
 import logzero
 from logzero import logger
 
-from queues import QUEUE_S, QUEUE_SPINBOX  # pylint: disable=wrong-import-position
+# from longtime_job import longtime_job
+from bee_aligner.plist_to_slist import plist_to_slist
+from bee_aligner.plist_to_flist import plist_to_flist
+from bee_aligner.text_to_paras import text_to_paras
+from bee_aligner.bee_aligner import bee_aligner
+from bee_aligner.bee_corr import bee_corr
+
+from check_thread_update import check_thread_update
+from get_time import get_time
+
 import myprogressbar_ui_support  # pylint: disable=wrong-import-position
 from queue1_put import queue1_put
+from queues import (QUEUE_S, QUEUE_SPINBOX, QUEUE_T1, QUEUE_T2,
+                    QUEUE_PS, QUEUE_PA, QUEUE_P1, QUEUE_P2, QUEUE_PM,)
 
 _ = os.environ.get("ALIGNER_DEBUG")
-if _ is not None and (_ == '1' or _.lower() == 'true'):
-    logzero.loglevel(10)  # 10: DEBUG, default 20: INFO
+logger.info('os.environ.get("ALIGNER_DEBUG"): %s', _)
+if _ is not None and _.lower() in ["1", "true"]:
+    logzero.loglevel(10)  # 10: DEBUG, default 20: INFO:
 else:
     logzero.loglevel(20)
-
-try:
-    import Tkinter as tk
-except ImportError:
-    import tkinter as tk
-
-try:
-    import ttk  # type: ignore
-
-    py3 = False
-except ImportError:
-    import tkinter.ttk as ttk
-
-    py3 = True
 
 
 def vp_start_gui():
@@ -84,7 +91,9 @@ class Mypbar:
         iconpath = Path(__file__).parent / "align.ico"
         # top.iconbitmap("align.ico")
         top.iconbitmap(iconpath)
-        
+
+        self.spinbox_value = 0.64
+
         _bgcolor = "#d9d9d9"  # X11 color: 'gray85'
         _fgcolor = "#000000"  # X11 color: 'black'
         _compcolor = "#d9d9d9"  # X11 color: 'gray85'
@@ -116,6 +125,7 @@ class Mypbar:
         )
         self.TProgressbar1.configure(variable=myprogressbar_ui_support.pbarvar)
         self.TProgressbar1.configure(takefocus="0")
+        self.TProgressbar1.configure(mode="indeterminate")
 
         self.TFrame1 = ttk.Frame(top)
         self.TFrame1.place(relx=0.0, rely=0.5, relheight=0.5, relwidth=1.0)
@@ -177,6 +187,7 @@ class Mypbar:
             spinbox_value = spinbox.get()
             self.Label_threshold.configure(text=f"""Threshold {spinbox_value}""")
 
+            # QUEUE_SPINBOX is really not necessary?
             # update spinbox_value to QUEUE_SPINBOX
             # print('__file__: ', __file__, f'placing spinbox [{spinbox_value}] in QUEUE_SPINBOX')
             logger.debug(
@@ -184,13 +195,32 @@ class Mypbar:
                 spinbox_value,
             )
             # QUEUE_SPINBOX.put(spinbox_value)
+
+            try:
+                self.spinbox_value = float(spinbox_value)
+            except Exception as exc:
+                logger.error(" self.spinbox_value = float(spinbox_value) exc: %s", exc)
+                self.spinbox_value = 0.64
+
+            logger.debug(
+                "self.spinbox_value [%s] in QUEUE_SPINBOX",
+                self.spinbox_value,
+            )
             queue1_put(QUEUE_SPINBOX, spinbox_value)
 
         spinbox.trace_variable("w", update_label_threhold)
 
         # use self.spinbox to remember spinbox
         # in the previous iteration
-        queue_spinbox = QUEUE_SPINBOX.get()
+        try:
+            queue_spinbox = QUEUE_SPINBOX.get_nowait()
+            queue1_put(QUEUE_SPINBOX, queue_spinbox)
+        except Empty:
+            logger.error(" QUEUE_SPINBOX.get_nowait Empty, set to 0.64")
+            queue_spinbox = 0.64
+        except Exception as exc:
+            logger.error(" QUEUE_SPINBOX.get_nowait() exc %s", exc)
+            queue_spinbox = 0.64
 
         # print(f' <myprogressbar.py> __file__: {Path(__file__).name}', f'queue_spinbox: {queue_spinbox}')
 
@@ -199,6 +229,14 @@ class Mypbar:
         except ValueError:
             spinbox_value = 0.64
         spinbox.set(spinbox_value)
+
+        logger.debug(" spinbox_value (threshold) set to %s", spinbox_value)
+
+        try:
+            self.spinbox_value = float(spinbox_value)
+        except Exception as exc:
+            logger.error(" self.spinbox_value = float(spinbox_value) exc: %s", exc)
+            self.spinbox_value = 0.64
 
         self.Label_srtatus = tk.Label(self.TFrame1)
         self.Label_srtatus.place(relx=0.0, rely=0.0, height=25, width=337)
@@ -242,11 +280,92 @@ class Mypbar:
     # logger.debug("%s", __file__)
     # exec(dedent(Path('start_command.py').read_text('utf-8')))
     def start_command(self, event=None):
-        from longtime_job import longtime_job
-        from check_thread_update import check_thread_update
+        """ need a QUEUE_PS (paras or sents flag).
 
-        # print('start_command.py')
-        logger.debug("start_command.py")
+        set when ativating palign or salign
+
+        flag = QUEUE_PS.get_nowait()
+        queue1_put(QUEUE_PS, flag)
+        """
+
+        try:
+            flag = QUEUE_PS.get_nowait()
+            queue1_put(QUEUE_PS, flag)
+        except Empty:
+            flag = ""
+
+        # ######### SENTS ###########
+        if flag in ["s"]:
+            logger.debug("salaign start_command")
+            logger.info("handle salign...")
+            # check_thread_update
+            # pbar (self) TButton1: Start, 2: Cancel,3: Back
+            self.TButton1.config(state=tk.DISABLED)
+            self.TButton2.config(state=tk.NORMAL)
+            self.TButton3.config(state=tk.DISABLED)
+
+            if not QUEUE_PA.qsize():
+                message = " Align paras first (Ctrl-P) "
+                messagebox.showwarning(title="Not ready", message=message)
+
+                # restore button state 1: Start, 2: Cancel, 3: Back
+                self.TButton1.config(state=tk.DISABLED)
+                self.TButton2.config(state=tk.DISABLED)
+                self.TButton3.config(state=tk.NORMAL)
+
+                return None
+
+            # palaigned set
+            try:
+                paras1 = QUEUE_P1.get_nowait()
+                queue1_put(QUEUE_P1, paras1)
+            except Exception as exc:
+                logger.error(" QUEUE_P1.get_nowait() exc: %s", exc)
+                return None
+            try:
+                paras2 = QUEUE_P2.get_nowait()
+                queue1_put(QUEUE_P2, paras2)
+            except Exception as exc:
+                logger.error(" QUEUE_P2.get_nowait() exc: %s", exc)
+                return None
+            try:
+                parasm = QUEUE_PM.get_nowait()
+                queue1_put(QUEUE_PM, parasm)
+            except Exception as exc:
+                logger.error(" QUEUE_PM.get_nowait() exc: %s", exc)
+                return None
+
+            lang0 = Detector(" ".join(paras1)).language.code
+            lang1 = Detector(" ".join(paras2)).language.code
+
+            plist = [*zip_longest(paras1, paras2, parasm)]
+
+            # slist = plist_to_slist(plist, lang0, lang1)
+            # tot = len(slist) * 2
+            tot = len(plist) * 2
+
+            if tot > 300:
+                msg = f"This can take about {get_time(tot)}. Continue?"
+                res = messagebox.askyesnocancel("Continue?", message=msg)
+                if not res:
+                    return
+
+            thr = Thread(
+                target=plist_to_flist,
+                args=(plist,),
+                kwargs={"lang0": lang0, "lang1": lang1}
+            )
+            thr.stop = False  # type: ignore
+            thr.start()
+
+            self.TProgressbar1.start()  # for mode="indeterminate"
+
+            check_thread_update(self, thr)
+
+            return None
+
+        # ######### PARAS ###########
+        logger.debug("palaign start_command")
         if event:
             # print(event)
             logger.debug("event: %s", event)
@@ -267,14 +386,70 @@ class Mypbar:
         self.TButton2.config(state=tk.NORMAL)
         self.TButton3.config(state=tk.DISABLED)
 
+        _ = """
         thr = Thread(
             target=longtime_job,
             # name='job_thr',
             kwargs={"counter": 10},
         )
+        # """
+
+        # src_text  # type: Union[str, List[str]
+        # tgt_text  # type: Union[str, List[str]
+
+        try:
+            src_text = QUEUE_T1.get_nowait()
+            queue1_put(QUEUE_T1, src_text)
+        except Empty:
+            src_text = ""
+        try:
+            tgt_text = QUEUE_T2.get_nowait()
+            queue1_put(QUEUE_T2, tgt_text)
+        except Empty:
+            tgt_text = ""
+
+        if not (src_text and tgt_text):
+            message = " Empty src_text or tgt_text "
+            messagebox.showwarning(title="Not ready", message=message)
+
+            # restore button state 1: Start, 2: Cancel,3: Back
+            self.TButton1.config(state=tk.DISABLED)
+            self.TButton2.config(state=tk.DISABLED)
+            self.TButton3.config(state=tk.NORMAL)
+
+            return None
+
+        logger.debug("src_text[:5]: %s", src_text[:5])
+        logger.debug("tgt_text[:5]: %s", tgt_text[:5])
+
+        src_lang = Detector("\n".join(src_text)).language.code
+        tgt_lang = Detector("\n".join(tgt_text)).language.code
+
+        # convert to lists, already lists
+        # src_text = text_to_paras(src_text)
+        # tgt_text = text_to_paras(tgt_text)
+
+        tot = len(src_text) + len(tgt_text)
+        if tot > 300:
+            msg = f"This can take about {get_time(tot)}. Continue?"
+            res = messagebox.askyesnocancel("Continue?", message=msg)
+            if not res:
+                return
+
+        # cos_mat = bee_corr(src_text, tgt_text, src_lang, tgt_lang)
+        # plist = bee_aligner(src_text, tgt_text, cos_mat)
+
+        thr = Thread(
+            target=bee_aligner,
+            args=(src_text, tgt_text),
+            kwargs={"thr": self.spinbox_value},
+        )
+
+        logger.debug(" self.spinbox_value: %.2f, %s",  self.spinbox_value, type(self.spinbox_value))
+
         thr.stop = False  # type: ignore
         thr.start()
-        # print('*job* thr_name: ', thr.name)
+
         logger.debug("*job* thr_name: %s", thr.name)
 
         # thr.value = 0
@@ -285,11 +460,13 @@ class Mypbar:
         self.TProgressbar1["value"] = 0
         self.TProgressbar1.step(100)
 
-        check_thread_update(thr, self)
+        self.TProgressbar1.start()  # for mode="indeterminate"
+
+        check_thread_update(self, thr)
 
         # thr.join()? fetch result from longtime_job
-        # thr.join() will block, hence nonresponsive 
-        
+        # thr.join() will block, hence nonresponsive
+
 
 if __name__ == "__main__":
     vp_start_gui()

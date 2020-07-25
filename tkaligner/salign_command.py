@@ -7,10 +7,15 @@ from logzero import logger
 from myprogressbar_ui import Mypbar
 import myprogressbar_ui_support
 
+from queue1_put import queue1_put
+from queues import QUEUE_PS
+
 
 def salign_command(self, event=None):
     """ salign_command. """
     logger.info("salign_command")
+
+    queue1_put(QUEUE_PS, "s")
 
     top = self.top
     # top = None

@@ -23,9 +23,11 @@ from extract_rows import extract_rows
 # from bee_aligner.plist_to_slist import plist_to_slist
 from bee_aligner.single_or_dual import single_or_dual
 from bee_aligner.text_to_plist import text_to_plist
-from longtime_job import longtime_job
+# from longtime_job import longtime_job
 
-# SIG_TABLE = blinker.signal("table")
+from queue1_put import queue1_put
+from queues import QUEUE_T1
+
 SIG_PAD = blinker.signal("pad")
 
 
@@ -70,7 +72,7 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
 
     # self.text2 = ""
 
-    if len(s_or_d) == 2:
+    if len(s_or_d) == 2:  # dualtext
         res = messagebox.askyesnocancel(
             f"Dual-language file or not", f"Tkaligner thinks this is a dual-language {s_or_d} file. Do you want to treat it as such?",
             default="yes",
@@ -98,6 +100,12 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
                 # name='job_thr',
             )
             thr.stop = False  # type: ignore
+
+            # prepare for check_thread_update1
+            # to set self.filename1/2 when successfully run
+            thr.filename1 = file  # type: ignore
+            thr.filename2 = file  # type: ignore
+
             thr.start()
 
             # refer to paligner.py self is Aligner
@@ -111,13 +119,19 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
             pbar.TProgressbar1.start(50)
 
             # check_thread_update1(thr, top, pbar)
-            check_thread_update1(thr, pbar)
+            # check_thread_update1(thr, pbar)
+            check_thread_update1(self, thr, pbar)
 
             # update table via slot_table in text_to_plist
             # blinker.signal("table").send(df=df_data)
             # self.Table.model.df = DataFrame(p_list, columns=["text1", "text2", "merit"])
 
-            return
+            # self.filename1 = file
+            # self.filename2 = file
+            # self.text1 = "\n".join(self.Table.model.df.text1)
+            # self.text2 = "\n".join(self.Table.model.df.text2)
+
+            return None
 
         else:  # user opts for single-lang  # left: self.text1 part
             values = self.text1
@@ -136,6 +150,9 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
 
             # reset merit
             self.Table.model.df.merit = ""
+
+            # self.filename1 = file
+
     else:
         # left: self.text1 part
         values = self.text1
@@ -159,3 +176,11 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
 
     self.Table.show()
     self.Table.redraw()
+
+    self.filename1 = file
+
+    # logger.debug(" setting filename1 and QUEUE_T1")
+    # logger.debug(" setting filename1 *%s* and QUEUE_T2", self.filename1)
+    logger.debug(" setting filename1 *%s* and QUEUE_T1 self.text1[:3] %s", self.filename1, self.text1[:3])
+
+    queue1_put(QUEUE_T1, self.text1)
