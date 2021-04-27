@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tkaligner"
-version = "0.0.1"
+version = "0.1.0"
 description = "tkaligner with bumblebee backend"
 authors = ["ffreemt"]
 license = "MIT"
