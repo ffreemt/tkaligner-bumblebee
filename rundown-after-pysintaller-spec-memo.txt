@@ -1,2 +1,5 @@
-python rsync-some-libs.py
-python rsync-bee_aligner-pyc-to-dist.py
+pyinstaller tkaligner-bumblebee.spec --noconfirm   # run-pyinstaller_tkaligner-bumblebee.spec.bat
+python rsync-some-libs.py  # or copy from the previous rar package
+python rsync-bee_aligner-tkaligner-pyc-to-dist.py
+
+run-dist-tkaligner-bumblebee.bat

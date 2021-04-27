@@ -18,6 +18,7 @@ import logzero
 
 # from logzero import logger
 
+# from tkaligner.langcode_to_tmxcode import langcode_to_tmxcode
 from langcode_to_tmxcode import langcode_to_tmxcode
 
 logger = logzero.setup_logger(name=__file__, level=10)  # pylint: disable=invalid-name
@@ -58,21 +59,21 @@ def lists_to_tmx(
         # raise Exception(" len(srclist) != len(tgtlist) ")
 
     if srclang is None:
-        lc1 = Detector(" ".join(srclist)[:5000]).language.code
+        lc1 = Detector(" ".join(srclist)[:5000], quiet=True).language.code
         srclang = langcode_to_tmxcode(lc1)
     if tgtlang is None:
-        lc2 = Detector(" ".join(tgtlist)[:5000]).language.code
+        lc2 = Detector(" ".join(tgtlist)[:5000], quiet=True).language.code
         tgtlang = langcode_to_tmxcode(lc2)
 
     if encoding is None:
         encoding = "utf-8"
 
-    root = et.Element("tmx", attrib={"version": "1.4"})
+    root = et.Element("tmx", attrib={"version": "1.4"})  # type: ignore
 
     # header =  # gen header
-    et.SubElement(root, "header", attrib={"amdinlang": srclang, "srclang": srclang})
+    et.SubElement(root, "header", attrib={"amdinlang": srclang, "srclang": srclang})  # type: ignore
 
-    body = et.SubElement(root, "body")
+    body = et.SubElement(root, "body")  # type: ignore
 
     # tuv_en = et.SubElement(tu, "tuv", xml:lang="en")  # 'xml:lang' gets error
     # tuv_zh = et.SubElement(tu, "tuv", xml:lang="zh")
@@ -81,15 +82,15 @@ def lists_to_tmx(
 
     # for itrange in tqdm.trange(len0):
     for itrange in range(len0):
-        tu = et.SubElement(body, "tu")
-        tuv_en = et.SubElement(tu, "tuv", attrib={"lang": srclang})
-        tuv_zh = et.SubElement(tu, "tuv", attrib={"lang": tgtlang})
+        tu = et.SubElement(body, "tu")  # type: ignore
+        tuv_en = et.SubElement(tu, "tuv", attrib={"lang": srclang})  # type: ignore
+        tuv_zh = et.SubElement(tu, "tuv", attrib={"lang": tgtlang})  # type: ignore
         # attach tuv to tree
-        et.SubElement(tuv_en, "seg").text = srclist[itrange]  # seg_en =
-        et.SubElement(tuv_zh, "seg").text = tgtlist[itrange]  # seg_zh =
+        et.SubElement(tuv_en, "seg").text = srclist[itrange]  # type: ignore
+        et.SubElement(tuv_zh, "seg").text = tgtlist[itrange]  # type: ignore
 
-    tree = et.ElementTree(root)
-    treestr = et.tostring(
+    tree = et.ElementTree(root)  # type: ignore
+    treestr = et.tostring(  # type: ignore
         tree,
         encoding=encoding,
         pretty_print=pretty_print,

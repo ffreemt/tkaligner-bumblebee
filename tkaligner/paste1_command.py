@@ -1,5 +1,5 @@
 """
-open1_command
+paste1_command
 """
 
 # import sys
@@ -33,52 +33,38 @@ SIG_PAD = blinker.signal("pad")
 
 # pylint: disable=invalid-name
 # self is Aligner in aligner_ui
-def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-argument
-    """ open1. """
-    logger.debug("open1_command")
+def paste1_command(self, file12="file1", event=None):  # pylint: disable=unused-argument
+    """ paste1. """
+    logger.debug("paste1_command")
 
-    if file12 in ["file1"]:  # file1 or file2, not implemented yet
-        ...
 
-    file = filedialog.askopenfilename(
-        title="Select a file",
-        filetypes=(
-            ("text files", "*.txt"),
-            # ("pdf files", "*.pdf"),
-            # ("docx files", "*.docx"),
-            ("all files", "*.*"),
-        ),
-    )
+    # text2 = pyperclip.copy().strip()
+    # text1 = pyperclip.copy().strip()
+    try:
+        win = tk.Tk()
+        win.withdraw()
+        text1 = win.clipboard_get().strip()
+    except Exception as exc:
+        logger.error(" text1 = tk.Tk().clipboard_get() exc: %s", exc)
+        text1 = str(exc)
 
-    if file is not None:
-        # self.text.delete('1.0', END)
+    if not text1.strip():
+        messagebox.showwarning(" Nothing in the clipboard ", "Copy something to the system clipbaord first and try again.")
+        return None
+    file = "clipboard1.txt"
 
-        # self.text1 = file.read()
-        try:
-            try:
-                text1, _ = load_paras(file)
-            except ValueError:
-                text1 = load_paras(file)
-        except Exception as exc:
-            logger.error("exc: %s", exc)
-            text1 = []
+    # convert to para list
+    # text1 = re.split(r"[\r\n]+", text1)
+    text1 = [elm for elm in text1.splitlines() if elm.strip()]
 
-        if not " ".join(text1).strip():
-            messagebox.showwarning(" Empty text", "Nothing loaded, we just exit. ")
-            return None
+    self.text1 = text1[:]
 
-        self.text1 = text1[:]
-
-        logger.debug("self.text1[:3]: %s", self.text1[:3])
-
-        # file.close()
+    logger.debug("self.text1[:3]: %s", self.text1[:3])
 
     # detect, ask and separate
-    text1 = "\n".join(self.text1)
+    # text1 = "\n".join(self.text1)
 
     s_or_d = single_or_dual(text1)
-
-    # self.text2 = ""
 
     if len(s_or_d) == 2:  # dualtext
         res = messagebox.askyesnocancel(
@@ -131,16 +117,7 @@ def open1_command(self, file12="file1", event=None):  # pylint: disable=unused-a
             check_thread_update1(self, thr, pbar)
 
             # disable Pad editing
-            blinker.signal("aligner").send("open1_comman", pbtoplevel="True")  # SIG_ALIGNER.send
-
-            # update table via slot_table in text_to_plist
-            # blinker.signal("table").send(df=df_data)
-            # self.Table.model.df = DataFrame(p_list, columns=["text1", "text2", "merit"])
-
-            # self.filename1 = file
-            # self.filename2 = file
-            # self.text1 = "\n".join(self.Table.model.df.text1)
-            # self.text2 = "\n".join(self.Table.model.df.text2)
+            blinker.signal("aligner").send("paste1_comman", pbtoplevel="True")  # SIG_ALIGNER.send
 
             return None
 

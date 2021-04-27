@@ -16,6 +16,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.6"
+logzero = "^1.7.0"
+blinker = "^1.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

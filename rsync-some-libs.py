@@ -31,7 +31,7 @@ mod_names = [
     'diskcache',
     # 'blinker',
     'dateutil',
-    'pytz',
+    # 'pytz',
     # 'six.py',
     'sentence_splitter',
     'regex',
@@ -40,11 +40,12 @@ mod_names = [
     # 'cycler.py',
     # 'kiwisolver',
     'yaspin',
-    'yaspin',
+    'langcodes',
+    'marisa_trie.cp36-win_amd64.pyd'
 ]
 
-# mod_names = [
-# ]
+mod_names = [
+]
 
 logger.info(mod_names)
 
@@ -70,8 +71,8 @@ for mod_name in mod_names:
 s_dir2 = Path(rf"\Python\Python36\lib").as_posix()
 s_dir2 = f"/cygdrive/c/{s_dir2}"
 mod_names = [
-    "tkinter",
-    # 'sqlite3',
+    # "tkinter",
+    ## 'sqlite3',
 ]
 for mod_name in mod_names:
     cmd = f"rsync -uvaz {s_dir2}/{mod_name} {d_dir} "

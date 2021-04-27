@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import blinker
+# import pyperclip
 import logzero
 from logzero import logger
 
@@ -25,49 +26,33 @@ SIG_PAD = blinker.signal("pad")
 
 
 # pylint: disable=
-def open2_command(self, event=None):  # pylint: disable=unused-argument
-    """ open2. """
+def paste2_command(self, event=None):  # pylint: disable=unused-argument
+    """ paste2_command. """
     # from load_paras import load_paras
 
-    logger.debug("<open2_command>")
+    logger.debug("<paste2_command>")
 
-    # from tkinter import filedialog
-    # self.top = self
-    # file = tk.filedialog.askopenfile(parent=root, mode='r', title='Select a file')
+    # text2 = pyperclip.copy().strip()
+    try:
+        win = tk.Tk()
+        win.withdraw()
+        text2 = win.clipboard_get().strip()
+    except Exception as exc:
+        logger.error(" text2 = tk.Tk().clipboard_get() exc: %s", exc)
+        text2 = str(exc)
 
-    # file = filedialog.askopenfile(parent=self.top, mode='r', title='Select a file')
-    file = filedialog.askopenfilename(
-        title="Select a file",
-        filetypes=(
-            ("text files", "*.txt"),
-            # ("pdf files", "*.pdf"),
-            # ("docx files", "*.docx"),
-            ("all files", "*.*"),
-        ),
-    )
+    if not text2.strip():
+        messagebox.showwarning(" Nothing in the clipboard ", "Copy something to the system clipbaord first and try again.")
+        return None
+    file = "clipboard2.txt" 
+    
+    # convert to para list
+    # text2 = re.split(r"[\r\n]+", text2)
+    text2 = [elm for elm in text2.splitlines() if elm.strip()]
 
-    if file is not None:
-        # self.text.delete('1.0', END)
-        # self.text2 = file.read()
+    self.text2 = text2[:]
 
-        try:
-            try:
-                text2, _ = load_paras(file)
-            except ValueError:
-                text2 = load_paras(file)
-        except Exception as exc:
-            logger.error("exc: %s", exc)
-            text2 = []
-
-        if not " ".join(text2).strip():
-            messagebox.showwarning(" Empty text", "Nothing loaded, we just exit. ")
-            return None
-
-        self.text2 = text2[:]
-
-        logger.debug("self.text2[:3]: %s", self.text2[:3])
-
-        # file.close()
+    logger.debug(" from clipboard self.text2[:3]: %s", self.text2[:3])
 
     # values = self.text2.split('\n')
     values = self.text2

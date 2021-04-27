@@ -14,6 +14,7 @@ from typing import List, Union
 import os
 import sys
 from pathlib import Path
+from time import sleep
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -25,6 +26,7 @@ from queue import Empty
 
 # from textwrap import dedent
 from polyglot.text import Detector
+import blinker
 
 import logzero
 from logzero import logger
@@ -41,15 +43,30 @@ from get_time import get_time
 
 import myprogressbar_ui_support  # pylint: disable=wrong-import-position
 from queue1_put import queue1_put
+from fetch_queue1 import fetch_queue1
 from queues import (QUEUE_S, QUEUE_SPINBOX, QUEUE_T1, QUEUE_T2,
-                    QUEUE_PS, QUEUE_PA, QUEUE_P1, QUEUE_P2, QUEUE_PM,)
+                    QUEUE_PS0, QUEUE_PS, QUEUE_PA,
+                    QUEUE_P1, QUEUE_P2, QUEUE_PM,
+                    QUEUE_DF, )
+
+SIG_ALIGNER = blinker.signal("aligner")
 
 _ = os.environ.get("ALIGNER_DEBUG")
-logger.info('os.environ.get("ALIGNER_DEBUG"): %s', _)
 if _ is not None and _.lower() in ["1", "true"]:
     logzero.loglevel(10)  # 10: DEBUG, default 20: INFO:
 else:
     logzero.loglevel(20)
+
+if _ is not None and _.lower() in ["1", "true"]:
+    level = 10
+else:
+    level = 20
+from logzero import setup_logger
+logger = setup_logger(
+    name=__file__,
+    level=level,
+)
+logger.debug('os.environ.get("ALIGNER_DEBUG"): %s', _)
 
 
 def vp_start_gui():
@@ -259,6 +276,19 @@ class Mypbar:
             logger.debug("%s", event)
         # if tkMessageBox.askokcancel(
 
+        logger.debug("""send blinker.signal to aligner slot:
+                {"PAlign": False, "SAlign": True,}""")
+        SIG_ALIGNER.send(
+            "check_thread_update1",
+            **{
+                "PAlign": False,
+                "SAlign": True,
+            }
+        )
+
+        # allow aligner to act?
+        sleep(1)
+
         self.top.destroy()
 
     def cancel_command(self):
@@ -273,6 +303,36 @@ class Mypbar:
         queue1_put(QUEUE_S, True)
 
         sleep(0.8)  # wait for thread to quit
+
+        # for salign_command
+        try:
+            flag = QUEUE_PS.get_nowait()
+            queue1_put(QUEUE_PS, flag)
+        except Empty:
+            flag = ""
+        if flag in ["s"]:  # activated from salign_command
+            logger.debug(""" pbar-s send blinker.signal to aligner slot:
+                    {"PAlign": True}""")
+            SIG_ALIGNER.send(
+                "pbar-s",
+                **{
+                    "PAlign": False,
+                    "SAlign": True,
+                    "pbtoplevel": False,  # pbar grab_release, permits editing Pad
+                }
+            )
+            return None
+
+        # for palign_command
+        logger.debug(""" pbar-p send blinker.signal to aligner slot: {"PAlign": True}""")
+        SIG_ALIGNER.send(
+            "pbar-p",
+            **{
+                "PAlign": True,
+                # "SAlign": True,
+                "pbtoplevel": False,  # pbar grab_release, permits editing Pad
+            }
+        )
 
         # destroy pbar
         # self.top.destroy()
@@ -295,8 +355,9 @@ class Mypbar:
             flag = ""
 
         # ######### SENTS ###########
+        # 358 - 475 salign
         if flag in ["s"]:
-            logger.debug("salaign start_command")
+            logger.debug("salign myprogressbar.start_command")
             logger.info("handle salign...")
             # check_thread_update
             # pbar (self) TButton1: Start, 2: Cancel,3: Back
@@ -305,8 +366,7 @@ class Mypbar:
             self.TButton3.config(state=tk.DISABLED)
 
             if not QUEUE_PA.qsize():
-                message = " Align paras first (Ctrl-P) "
-                messagebox.showwarning(title="Not ready", message=message)
+                messagebox.showwarning(title="Not ready", message=" Paras not aligned yet, align paras first (Ctrl-P) ")
 
                 # restore button state 1: Start, 2: Cancel, 3: Back
                 self.TButton1.config(state=tk.DISABLED)
@@ -315,9 +375,9 @@ class Mypbar:
 
                 return None
 
-            # palaigned set
             try:
                 paras1 = QUEUE_P1.get_nowait()
+                logger.debug(" paras1[:3]: %s",  paras1[:3])
                 queue1_put(QUEUE_P1, paras1)
             except Exception as exc:
                 logger.error(" QUEUE_P1.get_nowait() exc: %s", exc)
@@ -338,22 +398,58 @@ class Mypbar:
             lang0 = Detector(" ".join(paras1)).language.code
             lang1 = Detector(" ".join(paras2)).language.code
 
-            plist = [*zip_longest(paras1, paras2, parasm)]
+            # plist = [*zip_longest(paras1, paras2, parasm)]
+            # QUEUE_DF, model.df
+
+            try:
+                # plist = QUEUE_DF[0]
+                qdf = QUEUE_DF[0]
+            except IndexError:
+                logger.error(" qdf = QUEUE_DF[0] IndexError")
+                messagebox.showwarning(" Oh no!", "Nothing in QUEUE_DF")
+                return None
+            except Exception as exc:
+                logger.error(" qdf = QUEUE_DF[0] exc: %s", exc)
+                messagebox.showwarning(" Oh no!", "unable to obtain data frmo QUEUE_DF exc: %s" % exc)
+                return None
 
             # slist = plist_to_slist(plist, lang0, lang1)
             # tot = len(slist) * 2
-            tot = len(plist) * 2
+            tot = len(qdf) * 2
 
             if tot > 300:
                 msg = f"This can take about {get_time(tot)}. Continue?"
+                logger.debug(msg)
                 res = messagebox.askyesnocancel("Continue?", message=msg)
                 if not res:
                     return
 
+            # get QUEUE_PS and QUEUE_PS0 if both 's', set split=Fasle
+            try:
+                qps0 = QUEUE_PS0[0]
+            except IndexError:
+                qps0 = ""
+            # fetch QUEUE_PS and restore
+            qps = fetch_queue1(QUEUE_PS)
+
+            logger.debug(" qps0: %s qps0, qps: %s", qps0, qps)
+            split = True
+            if qps0 == qps:
+                split = False
+
+
+            plist = [*zip_longest(
+                qdf["text1"],
+                qdf["text2"],
+                qdf["merit"],
+            )]
+
+            logger.debug("split: %s, plist[:5]: %s", split, plist[:5])
+
             thr = Thread(
                 target=plist_to_flist,
                 args=(plist,),
-                kwargs={"lang0": lang0, "lang1": lang1}
+                kwargs={"lang0": lang0, "lang1": lang1, "split": split}
             )
             thr.stop = False  # type: ignore
             thr.start()
@@ -361,11 +457,23 @@ class Mypbar:
             self.TProgressbar1.start()  # for mode="indeterminate"
 
             check_thread_update(self, thr)
+            signal = {
+                "PAlign": False,
+                "SAlign": False,
+                "pbtoplevel": True,  # pbar grab_set, prevent editing Pad
+            }
+            logger.debug("""pbar send blinker.signal to aligner slot, signal: %s """, signal)
+            SIG_ALIGNER.send(
+                "check_thread_update1",
+                **signal
+            )
+
+            logger.debug(" pbar-s exit ")
 
             return None
 
         # ######### PARAS ###########
-        logger.debug("palaign start_command")
+        logger.debug("palign myprogressbar.start_command")
         if event:
             # print(event)
             logger.debug("event: %s", event)
@@ -409,31 +517,54 @@ class Mypbar:
             tgt_text = ""
 
         if not (src_text and tgt_text):
-            message = " Empty src_text or tgt_text "
-            messagebox.showwarning(title="Not ready", message=message)
+            messagebox.showwarning(title="Not ready", message=" Empty src_text or tgt_text, load files first. ")
 
-            # restore button state 1: Start, 2: Cancel,3: Back
+            # restore button state 1: Start, 2: Cancel, 3: Back
             self.TButton1.config(state=tk.DISABLED)
-            self.TButton2.config(state=tk.DISABLED)
             self.TButton3.config(state=tk.NORMAL)
+            self.TButton2.config(state=tk.DISABLED)
 
             return None
 
         logger.debug("src_text[:5]: %s", src_text[:5])
         logger.debug("tgt_text[:5]: %s", tgt_text[:5])
 
-        src_lang = Detector("\n".join(src_text)).language.code
-        tgt_lang = Detector("\n".join(tgt_text)).language.code
+        try:
+            src_lang = Detector("\n".join(src_text)).language.code
+        except Exception as exc:
+            # messagebox.showerror(" Oh no! ", str(exc))
+            # self.TButton1.config(state=tk.DISABLED)
+            # self.TButton3.config(state=tk.NORMAL)
+            # self.TButton2.config(state=tk.DISABLED)
+            # return None
+            logger.error("""src_lang = Detector("\n".join(src_text)).language.code exc: %s""", exc)
+            src_lang = "en"
+
+        try:
+            tgt_lang = Detector("\n".join(tgt_text)).language.code
+        except Exception as exc:
+            # messagebox.showerror(" Oh no! ", str(exc))
+            # self.TButton1.config(state=tk.DISABLED)
+            # self.TButton3.config(state=tk.NORMAL)
+            # self.TButton2.config(state=tk.DISABLED)
+            # return None
+            logger.error("""tgt_lang = Detector("\n".join(tgt_text)).language.code exc: %s""", exc)
+            tgt_lang = "en"
 
         # convert to lists, already lists
         # src_text = text_to_paras(src_text)
         # tgt_text = text_to_paras(tgt_text)
 
         tot = len(src_text) + len(tgt_text)
+        logger.debug("tot: %s, len(src_text): %s, len(tgt_text): %s, src_text[:3]: %s, tgt_text[:3]: %s", tot, len(src_text), len(tgt_text), src_text[:3], tgt_text[:3])
         if tot > 300:
             msg = f"This can take about {get_time(tot)}. Continue?"
+            logger.debug(msg)
             res = messagebox.askyesnocancel("Continue?", message=msg)
             if not res:
+                self.TButton1.config(state=tk.DISABLED)
+                self.TButton3.config(state=tk.NORMAL)
+                self.TButton2.config(state=tk.DISABLED)
                 return
 
         # cos_mat = bee_corr(src_text, tgt_text, src_lang, tgt_lang)
@@ -467,6 +598,18 @@ class Mypbar:
         # thr.join()? fetch result from longtime_job
         # thr.join() will block, hence nonresponsive
 
+        signal = {
+            "PAlign": False,
+            # "SAlign": True,
+            "pbtoplevel": True,  # pbar grab_set, prevent editing Pad
+        }
+        logger.debug("""send blinker.signal to aligner slot, signal: %s """, signal)
+        SIG_ALIGNER.send(
+            "check_thread_update",
+            **signal
+        )
+
+        logger.debug(" pbar-p exit ")
 
 if __name__ == "__main__":
     vp_start_gui()

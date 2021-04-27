@@ -24,18 +24,22 @@ import blinker
 import logzero
 from logzero import logger
 
+from __init__ import __version__
+
 # from bee_aligner.color_table_applymap import color_table_applymap
 
 # from extract_rows import extract_rows
 
 SIG_TABLE = blinker.signal("table")
 
+_ = """  # comment this to set debug for this file
 from logzero import setup_logger
 logger = setup_logger(
     name=__file__,
     level=10,
 )
 logger.debug("hello")
+# """
 
 
 def on_howto(event=None):  # pylint: disable=unused-argument
@@ -44,19 +48,19 @@ def on_howto(event=None):  # pylint: disable=unused-argument
     msg = """
         In brief
 
-        1. Load files: from menu/File (or use shortcuts Ctrl-O and Ctrl-P)
+        1. Load files or paste content from system clipbaord: from menu/File (or use shortcuts Ctrl-O and Ctrl-N)
 
-        2. Para-Align: from menu/Edit (shorcut Ctrl-P)
+        2. Para-Align: from menu/Edit (shortcut Ctrl-P)
             * When the popup windows shows up: adjust Threshold from the spinbox and click Start
-            * Manipulate the upper table to your satifaction
+            * Manipulate the upper table to your satisfaction
             * Click Back to return
 
-        3. Sent-Align: from menu/Edit (shorcut Ctrl-S)
-            * Manipulate the upper table to your satifaction
+        3. Sent-Align: from menu/Edit (shortcut Ctrl-S)
+            * Manipulate the upper table to your satisfaction: Use Ctr-A/Ctr-C/Ctr-X/Ctr-X (Select-All/Copy/Cut/Paste) in the upper table for editing.
 
-        4. Save as tsv or TMX: from menu/File (shorcuts: Ctrl-T or Ctrl-M)
+        4. Save as csv, TMX ot xlsx: from menu/File (shortcuts: Ctrl-T or Ctrl-L)
 
-        Detailed manual coming soon.
+        Consult the readme file in Chinese included in the package or join qq-group 316287378 to ask questions you may have.
 
     """
     width = 50
@@ -101,7 +105,7 @@ def on_about(event=None):  # pylint: disable=unused-argument
     msg = """
         An aligner for translation memory and parallel corpora
 
-        Brought to you from mu's desk (@qq41947782) in cyberspace, last edited on 1 Nov. 2019 and 10 Jul. 2020
+        Brought to you from mu's desk (@qq41947782) in cyberspace, last edited on 1 Nov. 2019 and 30 Jul. 2020
 
         © 2020 mu All Rights Reserved
     """
@@ -127,4 +131,5 @@ def on_about(event=None):  # pylint: disable=unused-argument
     iconpath = Path(__file__).parent / "align.ico"
     top.iconbitmap(default=iconpath)
     # top.iconbitmap(default="align.ico")
-    messagebox.showinfo("About Tkalinger v.0.0.6", msg, parent=top)
+    # messagebox.showinfo(f"About Tkalinger v.0.0.6a", msg, parent=top)
+    messagebox.showinfo(f"About Tkalinger {__version__}", msg, parent=top)

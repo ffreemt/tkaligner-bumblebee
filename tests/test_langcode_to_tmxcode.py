@@ -1,6 +1,6 @@
 """ test langcode_to_tmxcode. """
 
-from freemt_utils import langcode_to_tmxcode
+from tkaligner.langcode_to_tmxcode import langcode_to_tmxcode
 
 
 def test_langcode_to_tmxcode():

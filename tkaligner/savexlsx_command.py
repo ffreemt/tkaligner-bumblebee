@@ -3,6 +3,7 @@
 
 import os
 from pathlib import Path
+import numpy as np
 from pandas import DataFrame
 
 from tkinter import messagebox
@@ -16,20 +17,20 @@ from bee_aligner.common_prefix import common_prefix
 from queue import Empty
 from queue1_put import queue1_put
 from queues import (QUEUE_PA, QUEUE_SA,
-                    QUEUE_P1, QUEUE_P2, QUEUE_S1, QUEUE_S2,
-                    QUEUE_PM, QUEUE_SM)
+                    QUEUE_P1, QUEUE_P2, QUEUE_PM,
+                    QUEUE_S1, QUEUE_S2, QUEUE_SM)
 
-logger = logzero.setup_logger(name=__file__, level=10)
+# logger = logzero.setup_logger(name=__file__, level=10)
 
 _ = os.environ.get("ALIGNER_DEBUG")
-logger.info('os.environ.get("ALIGNER_DEBUG"): %s', _)
 if _ is not None and _.lower() in ["1", "true"]:
     logzero.loglevel(10)  # 10: DEBUG, default 20: INFO:
 else:
     logzero.loglevel(20)
+logger.debug('os.environ.get("ALIGNER_DEBUG"): %s', _)
 
 
-def savexlsx_command(self, event=None):
+def savexlsx_command(self, event=None) -> None:
     """ savexlsx_command.
     self is aligner
     self.Table.model.df: DataFrame of interest
@@ -74,8 +75,8 @@ def savexlsx_command(self, event=None):
 
     if not (filename1 and filename2):
         logger.info(" filename1: %s, filename2: %s not loaded", filename1, filename2)
-        message = f"filename1: *{filename1}*, filename2: *{filename2}* not loaded"
-        messagebox.showwarning(title="Not ready", message=message)
+        # message = f"filename1: *{filename1}*, filename2: *{filename2}* not loaded"
+        messagebox.showwarning(title="Not ready", message=f"filename1: *{filename1}*, filename2: *{filename2}* not loaded")
         return None
 
     logger.debug("file1: %s", filename1)
@@ -107,22 +108,37 @@ def savexlsx_command(self, event=None):
         logger.info(" Aligned paras saved to %s", xlsxfile_p)
         msg += " Aligned paras saved to %s\n" % xlsxfile_p
 
-    logger.debug(" self.sents1: %s, self.sents2: %s", self.sents1, self.sents2)
+    # logger.debug(" self.sents1[:5]: %s, self.sents2[:5]: %s", self.sents1[:5], self.sents2[:5])
 
     if self.saligned:
+        _ = """
         df_ = DataFrame({
             "text1": self.sents1,
             "text2": self.sents2,
             "merit": self.sents_merit
         })
-        df_.to_excel(xlsxfile_s, index=False, header=False, encoding="gbk")
-        logger.info(" Aligned sents saved to %s", xlsxfile_s)
-        msg += " Aligned sents saved to %s" % xlsxfile_s
+        # """
+        df_ = self.Table.model.df
+        # remove all empty rows
+        # df0.replace("", np.nan).dropna(axis=0)
+        # df_ = df_.replace("", np.nan).dropna(axis=0)
+        df_.replace("", np.nan, inplace=True)
+        df_.dropna(axis=0, inplace=True)
+
+        try:
+            df_.to_excel(xlsxfile_s, index=False, header=False)
+            logger.info(" Aligned sents saved to %s", xlsxfile_s)
+            msg += " Aligned sents saved to %s" % xlsxfile_s
+        except Exception as exc:
+            logger.error(" df_.to_excel exc: %s", exc)
+            msg += " Saving xlsx exc: %s " % exc
+
 
     msg = msg.strip()
     if msg:
         messagebox.showinfo(title="File(s) saved", message=msg)
-
-    logger.debug("xlsfile: %s, %s", xlsxfile_p, xlsxfile_s)
-
+        logger.debug("xlsfile: %s, %s", xlsxfile_p, xlsxfile_s)
+    else:
+        message = "Do some work first..."
+        messagebox.showwarning(title="Nothing to save, yet", message=message)
     logger.info("savexlsx_command")

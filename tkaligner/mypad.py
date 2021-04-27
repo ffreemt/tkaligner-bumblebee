@@ -52,6 +52,19 @@ SIG_PAD = blinker.signal('pad')
 SIG_TABLE = blinker.signal('table')
 
 
+_ = os.environ.get("ALIGNER_DEBUG")
+if _ is not None and _.lower() in ["1", "true"]:
+    level = 20
+else:
+    level = 20
+from logzero import setup_logger
+logger = setup_logger(
+    name=__file__,
+    level=level,
+)
+logger.debug('os.environ.get("ALIGNER_DEBUG"): %s', _)
+
+
 def vp_start_gui():
     '''Starting point when module is the main routine.'''
     global val, w, root

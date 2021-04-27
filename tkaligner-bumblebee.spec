@@ -11,6 +11,7 @@ a = Analysis(['tkaligner\\__main__.py'],
                 (r'tkaligner\align.ico', r'bee_aligner'),  # make bee_aligner dir
                 (r'tkaligner\align.ico', r'tkaligner'),
                 (r'tkaligner\align.ico', r'.'),
+                (r'..\bumblebee-aligner\bee_aligner\bumblebee1024p.pt', r'bee_aligner'),
              ],
              hiddenimports=[
                 'pickletools',

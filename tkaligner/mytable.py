@@ -45,12 +45,17 @@ SIG_PAD = blinker.signal('pad')
 # LOGGER = logging.getLogger(__name__)
 # LOGGER.addHandler(logging.NullHandler())
 
+_ = os.environ.get("ALIGNER_DEBUG")
+if _ is not None and _.lower() in ["1", "true"]:
+    level = 20
+else:
+    level = 20
 from logzero import setup_logger
 logger = setup_logger(
     name=__file__,
-    level=20,
+    level=level,
 )
-logger.info("hello")
+logger.debug('os.environ.get("ALIGNER_DEBUG"): %s', _)
 
 
 class MyTable(Table):  # pylint: disable=too-many-ancestors
@@ -213,7 +218,8 @@ class MyTable(Table):  # pylint: disable=too-many-ancestors
 
         # handle df from longtime_job: SIG_PAD.send('job', df=df_data)
 
-        # logger.info(" kw: %s", kw)
+        # logger.debug(" received kw: %s", kw)
+        logger.debug(" received kw ")
 
         df = kw.get("df")
         if df is not None:
