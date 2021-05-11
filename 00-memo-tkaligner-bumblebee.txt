@@ -1,0 +1,16 @@
+
+start-venv.bat
+        \dl\Dropbox\mat-dir\\myapps\tkaligner\.venv\Scripts\activate
+    use python and libs in myapps\tkaligner
+        scipy pydicom spacy numpy flyai botocore pandas jieba pyarrow notebook enchant streamlit matplotlib blis jupyterlab wandb mypy thinc transformers nltk xonsh pythonwin
+        xlsxwriter xlrd
+        icu cld2 morfessor
+        chardet more_itertools
+        langcodes pycountry
+        torch-1.6.0+cpu fastai
+        yasp (ui
+        gdown
+        logzero
+        
+ui files from PAGE layout in
+    myapps\tkaligner\ui
