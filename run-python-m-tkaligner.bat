@@ -8,5 +8,9 @@ REM cp -i tkaligner\check_thread_update.py .
 REM cp -i tkaligner\get_time.py .
 REM cp -i tkaligner\fetch_queue1.py .
 
-REM start-venv.bat \dl\Dropbox\mat-dir\\myapps\tkaligner\.venv\Scripts\activate
+REM start-venv.bat
+
+setlocal PYTHONPATH=tkaligner;%PYTHONPATH%
+
+\dl\Dropbox\mat-dir\\myapps\tkaligner\.venv\Scripts\activate
 python -m tkaligner

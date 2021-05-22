@@ -32,6 +32,7 @@ def quit_command(self, event=None):  # pylint: disable=unused-argument
         # win.withdraw()
         # messagebox.showinfo("Oh man...", "That's rough, but it works nevertheless.")
 
+        self.top.quit()
         # return None
 
     # if tkMessageBox.askokcancel(
