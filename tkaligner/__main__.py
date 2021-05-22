@@ -1,7 +1,4 @@
-""" tkinter aligner UI part.
-
-based on  aligner_ui.py
-"""
+"""Run tkinter aligner UI part, based on  aligner_ui.py"""
 
 import os
 import tkinter as tk

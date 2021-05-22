@@ -31,6 +31,9 @@ from tkaligner.myprogressbar_ui import Mypbar
 import tkaligner.myprogressbar_ui_support
 from tkaligner.longtime_job import longtime_job
 
+
+# execute set PYTHONPATH=tkaligner;%PYTHONPATH%
+# to avoid .
 from mypad import MyPad  # mypad_ui.tcl/py?
 from mytable import MyTable
 from queues import QUEUE_SPINBOX
@@ -41,7 +44,7 @@ import tkinter.ttk as ttk
 
 import aligner_ui_support
 from queue1_put import queue1_put
-from support import on_howto, on_about  # savetmx_command
+from support import on_howto, on_about
 
 from open1_command import open1_command
 from open2_command import open2_command
@@ -453,8 +456,3 @@ if __name__ == '__main__':
     else:
         logzero.loglevel(20)
     vp_start_gui()
-
-
-
-
-
